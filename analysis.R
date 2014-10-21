@@ -13,3 +13,7 @@ build_report <- function() {
 
 train <- read("training.csv")
 test <- read("testing.csv")
+
+set.seed(86)
+
+
