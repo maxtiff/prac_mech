@@ -1,6 +1,9 @@
 library(caret)
 library(foreach)
-library(doParallel)
+library(doSNOW)
+
+cl <- makeCluster(3, type="SOCK")
+registerDoSNOW(cl)
 
 download <- function() {
   download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "training.csv")
