@@ -16,9 +16,7 @@ read <- function(file) {
 }
 
 
-build_report <- function() {
-  knit2html("project.Rmd", "index.html")
-}
+
 
 ## download files
 download()
@@ -48,3 +46,5 @@ answers <- predictions
 # setwd('~/datasciencecoursera/parc_mech/files')
 
 pml_write_files(predictions)
+
+buildReport()
