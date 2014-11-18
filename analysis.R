@@ -3,16 +3,13 @@ library(foreach)
 library(doSNOW)
 
 ## Load required scripts from workflow
-required.scripts <- c('clean.R','error.R','filter.R')
+required.scripts <- c('clean.R','error.R','filter.R','download.R','submisson.R')
 sapply(required.scripts, source, .GlobalEnv)
 
 cl <- makeCluster(2, type="SOCK")
 registerDoSNOW(cl)
 
-download <- function() {
-  download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "training.csv")
-  download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "testing.csv")
-}
+
 
 read <- function(file) {
   fread(file, na.strings=c("#DIV/0!",""), stringsAsFactors = F)
@@ -23,6 +20,7 @@ build_report <- function() {
   knit2html("project.Rmd", "index.html")
 }
 
+## download files
 download()
 
 trainRaw <- read("training.csv")
@@ -44,13 +42,9 @@ transform.features <- function(x) {
 ## try only columns that have values
 trainFeatures <- drop(trainRaw[,eval(names(which(na.cols == F))),with=F])
 
+answers <- predictions
+
 # setwd('~/parc_mech/files')
 # setwd('~/datasciencecoursera/parc_mech/files')
 
-pml_write_files = function(x){
-  n = length(x)
-  for(i in 1:n){
-    filename = paste0("problem_id_",i,".txt")
-    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
-  }
-}
+pml_write_files(predictions)

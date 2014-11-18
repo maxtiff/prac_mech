@@ -1,7 +1,3 @@
-# setwd('~/parc_mech/files')
-# setwd('~/datasciencecoursera/parc_mech/files')
-
-answers <- predictions
 
 pml_write_files <- function(x){
   n = length(x)
