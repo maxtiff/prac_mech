@@ -4,5 +4,5 @@ download <- function() {
 }
 
 read <- function(file) {
-  fread(file, na.strings=c("#DIV/0!",""), stringsAsFactors = F)
+  fread(file, na.strings=c("#DIV/0!",""))
 }
