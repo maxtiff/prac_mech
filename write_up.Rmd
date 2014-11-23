@@ -5,28 +5,200 @@ date: "Saturday, November 22, 2014"
 output: html_document
 ---
 
+## Summary
+The intent of this project will be to use data from accelerometers on the belt,
+forearm, arm, and dumbell of 6 participants.
+
+Participants were asked to perform barbell lifts correctly and incorrectly in 5
+different ways. More information is available from the website here:
+http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+## Data
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible
+to collect a large amount of data about personal activity relatively inexpensively.
+These type of devices are part of the quantified self movement of a group of
+enthusiasts who take measurements about themselves regularly to improve their health,
+to find patterns in their behavior, or because they are tech geeks.
+One thing that people regularly do is quantify how much of a particular activity they do,
+but they rarely quantify how well they do it.
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har.
+
+## Analysis
+Before the analysis can be done in earnest, a few steps are required.
+
+### Initial Work
+Initially, the environment's working directory must be pointed to the correct
+local directory.
 ```{r, echo=FALSE}
-## Set working dir
 setwd("~/datasciencecoursera/prac_mech")
 ```
 
+Next, all required libraries must be loaded.
 ```{r}
-## Load required libraries for analysis
 library(caret)
 library(foreach)
 library(doSNOW)
 library(data.table)
 library(knitr)
-
-## Load required scripts from workflow
-required.scripts <- c('clean.R','error.R','download.R','submission.R')
-sapply(required.scripts, source, .GlobalEnv)
 ```
-
-You can also embed plots, for example:
-
+To facilitate the computing process, parallel processing is required.
 ```{r, echo=FALSE}
-plot(cars)
+cl <- makeCluster(4, type="SOCK")
+registerDoSNOW(cl)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Download Data
+```{r}
+download <- function() {
+
+  trainURL <-"http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+  testURL <- "http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+
+  download.file(trainURL, "training.csv")
+  download.file(testURL, "testing.csv")
+}
+
+download()
+```
+### Read the files into the environment
+```{r}
+read <- function(file) {
+  fread(file, na.strings=c("#DIV/0!",""))
+}
+
+trainRaw <- read("training.csv")
+testRaw <- read("testing.csv")
+```
+
+### Set the seed for prediction
+```{r}
+set.seed(1986)
+```
+
+### Cleaning the data
+Any columns that contain incomplete data need to be removed from the data frames.
+Additionally, the training data frame has a column named 'classe' which needs
+to be converted to the factor type.
+
+```{r}
+## Drops unnecessary columns
+drop <- function(x) {
+  return(x[,!c("V1", "user_name", "raw_timestamp_part_1", "raw_timestamp_part_2",
+  "cvtd_timestamp", "new_window", "num_window"),with=F])
+}
+
+## Convert 'classe' column into factor type for processing.
+transformFeatures <- function(x) {
+  return(x[,classe:=factor(classe)])
+}
+
+filter <- function(df) {
+
+  # Convert name of data frame into string to test for features in data.
+  frameName <- deparse(substitute(df))
+
+  # Remove any rows that contain NA values
+  missing <- sapply(df, function(x) any(is.na(x)))
+  df <- df[,eval(names(which(missing == FALSE))),with=F]
+
+  # Drop unnecessary columns
+  df <- drop(df)
+
+  # Transform training-data-specific "classe" column into factor type.
+  if (grepl("^(train)",frameName) == TRUE) {
+    if ("classe" %in% colnames(df)) {
+      transformFeatures(df)
+    }
+  } else if (grepl("^(test)", frameName) == TRUE) {
+    #continue
+  } else {
+    print("Check that the data frames are correctly labeled.")
+  }
+
+  return(df)
+}
+```
+
+Using the previous functions, the data can be effectively cleaned.
+```{r}
+trainFeatures <- filter(trainRaw)
+testFeatures <- filter(testRaw)
+```
+
+### Building Models and Testing Predictions
+Three types of models will be used: 'Random Forest', 'SVM', also known as
+'Radial Kernel', and 'KNN'.
+
+The control uses 5-fold cross validation.
+```{r}
+control <- trainControl(method = "cv", number = 5, allowParallel = TRUE,
+                        verboseIter = TRUE)
+model1 <- train(classe ~ ., data=trainFeatures, method = "rf",
+                trControl = control)
+model2 <- train(.outcome ~ ., data=trainFeatures, method = "svmRadial",
+                trControl = control)
+model3 <- train(.outcome ~ ., data=trainFeatures, method="knn",
+                trControl = control)
+```
+
+```{r, echo = FALSE}
+accuracy <- data.frame(Model=c("Random Forest", "SVM (radial)", "KNN"),
+                      Accuracy=c(round(max(head(model1$results)$Accuracy), 3),
+                                 round(max(head(model2$results)$Accuracy), 3),
+                                 round(max(head(model3$results)$Accuracy), 3)))
+```
+Below, one can see the accuracy of each model side-by-side.
+```{r}
+kable(accuracy)
+```
+
+Now, predictions can be derived from each model.
+```{r, echo = FALSE}
+prediction1 <- predict(model1, testFeatures)
+prediction2 <- predict(model2, testFeatures)
+prediction3 <- predict(model3, testFeatures)
+```
+
+For comparison, a table with the prediction values will be created.
+```{r}
+predictions <- data.frame(rf = prediction1, svm = prediction2,
+                          knn = prediction3)
+predictions$agree <- with(predictions, rf == svm && rf == knn)
+agree <- all(predictions$agree)
+
+colnames(predictions) <- c("Random Forest", "SVM", "KNN", "Agreement")
+```
+
+All models agree.
+```{r}
+kable(predictions)
+```
+
+### Submission
+The files can now be created for grading.
+```{r}
+answers <- predictions[,1]
+
+setwd('~/datasciencecoursera/prac_mech/files')
+
+
+pml_write_files <- function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+## Write files for submission
+pml_write_files(answers)
+```

@@ -9,7 +9,7 @@ library(data.table)
 library(knitr)
 
 ## Load required scripts from workflow
-required.scripts <- c('clean.R','error.R','download.R','submission.R')
+required.scripts <- c('clean.R','error.R','download.R','submission.R','buildRMD.r')
 sapply(required.scripts, source, .GlobalEnv)
 
 ## Create computing clusters from processor cores
@@ -34,11 +34,11 @@ testFeatures <- filter(testRaw)
 ## Build models
 control <- trainControl(method = "cv", number = 5, allowParallel = TRUE,
                         verboseIter = TRUE)
-model1 <- train(classe ~ ., data=trainFeatures, method = "rf", 
+model1 <- train(classe ~ ., data=trainFeatures, method = "rf",
                 trControl = control)
-model2 <- train(.outcome ~ ., data=trainFeatures, method = "svmRadial", 
+model2 <- train(.outcome ~ ., data=trainFeatures, method = "svmRadial",
                 trControl = control)
-model3 <- train(.outcome ~ ., data=trainFeatures, method="knn", 
+model3 <- train(.outcome ~ ., data=trainFeatures, method="knn",
                 trControl = control)
 
 ## Create table of accuracy statistics
@@ -55,7 +55,7 @@ prediction2 <- predict(model2, testFeatures)
 prediction3 <- predict(model3, testFeatures)
 
 ## Create data frame of predictions for submission
-predictions <- data.frame(rf = prediction1, svm = prediction2, 
+predictions <- data.frame(rf = prediction1, svm = prediction2,
                           knn = prediction3)
 predictions$agree <- with(predictions, rf == svm && rf == knn)
 agree <- all(predictions$agree)
@@ -69,5 +69,5 @@ setwd('~/datasciencecoursera/prac_mech/files')
 ## Write files for submission
 pml_write_files(answers)
 
-## Write report for submission
+setwd('~datasciencecoursera/prac_mech')
 buildReport()

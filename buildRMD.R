@@ -1,3 +1,3 @@
 buildReport <- function() {
-  knit2html("project.Rmd", "index.html")
+  knit2html("write_up.Rmd", "index.html")
 }
