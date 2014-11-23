@@ -157,7 +157,7 @@ accuracy <- data.frame(Model=c("Random Forest", "SVM (radial)", "KNN"),
                                  round(max(head(model3$results)$Accuracy), 3)))
 ```
 Below, one can see the accuracy of each model side-by-side.
-```{r}
+```{r, results='asis'}
 kable(accuracy)
 ```
 
@@ -179,7 +179,7 @@ colnames(predictions) <- c("Random Forest", "SVM", "KNN", "Agreement")
 ```
 
 All models agree.
-```{r}
+```{r,results='asis'}
 kable(predictions)
 ```
 
@@ -187,9 +187,6 @@ kable(predictions)
 The files can now be created for grading.
 ```{r}
 answers <- predictions[,1]
-
-setwd('~/datasciencecoursera/prac_mech/files')
-
 
 pml_write_files <- function(x){
   n = length(x)
